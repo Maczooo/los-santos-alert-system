@@ -2,11 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { ThreatLevel } from '@/types/alert';
 
-// Te zmienne powinny być ustawione w panelu Supabase w produkcji
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Using the existing Supabase client from the integrations folder
+import { supabase } from '@/integrations/supabase/client';
 
 export async function getCurrentThreatLevel(): Promise<ThreatLevel | null> {
   try {
