@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { ThreatLevel } from '@/types/alert';
+import { ThreatLevel, ThreatCode } from '@/types/alert';
 
 // Using the existing Supabase client from the integrations folder
 import { supabase } from '@/integrations/supabase/client';
@@ -19,7 +19,11 @@ export async function getCurrentThreatLevel(): Promise<ThreatLevel | null> {
       return null;
     }
 
-    return data;
+    // Type assertion to ensure threat_code is of ThreatCode type
+    return {
+      ...data,
+      threat_code: data.threat_code as ThreatCode
+    };
   } catch (error) {
     console.error('Error fetching threat level:', error);
     return null;
@@ -39,7 +43,11 @@ export async function getThreatLevelHistory(limit = 5): Promise<ThreatLevel[]> {
       return [];
     }
 
-    return data || [];
+    // Map each item and ensure threat_code is of ThreatCode type
+    return data?.map(item => ({
+      ...item,
+      threat_code: item.threat_code as ThreatCode
+    })) || [];
   } catch (error) {
     console.error('Error fetching threat history:', error);
     return [];
@@ -48,8 +56,8 @@ export async function getThreatLevelHistory(limit = 5): Promise<ThreatLevel[]> {
 
 export async function updateThreatLevel(threatCode: string, message?: string): Promise<ThreatLevel | null> {
   try {
-    const newThreatLevel: ThreatLevel = {
-      threat_code: threatCode as any,
+    const newThreatLevel = {
+      threat_code: threatCode,
       message: message || null,
       updated_at: new Date().toISOString(),
     };
@@ -65,7 +73,11 @@ export async function updateThreatLevel(threatCode: string, message?: string): P
       return null;
     }
 
-    return data;
+    // Type assertion to ensure threat_code is of ThreatCode type
+    return {
+      ...data,
+      threat_code: data.threat_code as ThreatCode
+    };
   } catch (error) {
     console.error('Error updating threat level:', error);
     return null;
