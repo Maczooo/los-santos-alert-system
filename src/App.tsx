@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AlertProvider } from "@/contexts/AlertContext";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
+import Login from "./pages/Login";
 import Logout from "./pages/Logout";
 import NotFound from "./pages/NotFound";
 
@@ -22,6 +23,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/logout" element={<Logout />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -3,9 +3,14 @@ import { useEffect } from "react";
 import { AlertStatus } from "@/components/AlertStatus";
 import { AlertHistory } from "@/components/AlertHistory";
 import { SystemInfo } from "@/components/SystemInfo";
+import { CityMap } from "@/components/CityMap";
+import { RecommendationsList } from "@/components/RecommendationsList";
 import { useAlert } from "@/contexts/AlertContext";
 import { Header } from "@/components/Header";
 import { AlertTriangle } from "lucide-react";
+import NotificationSubscriber from "@/components/NotificationSubscriber";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const { currentThreatLevel, threatHistory, isLoading } = useAlert();
@@ -33,6 +38,13 @@ export default function Home() {
               </p>
             </div>
           )}
+          
+          <div className="mt-4 flex justify-center gap-2">
+            <NotificationSubscriber />
+            <Link to="/admin">
+              <Button variant="outline">Panel administratora</Button>
+            </Link>
+          </div>
         </div>
         
         {isLoading ? (
@@ -48,6 +60,15 @@ export default function Home() {
                 <p className="text-gray-500">Brak aktywnych alertów</p>
               </div>
             )}
+            
+            {/* Nowy komponent mapy */}
+            <div className="my-8">
+              <h2 className="text-xl font-semibold mb-4">Mapa zagrożeń</h2>
+              <CityMap />
+            </div>
+            
+            {/* Zalecenia w zależności od zagrożenia */}
+            <RecommendationsList />
             
             <AlertHistory history={threatHistory} />
             
