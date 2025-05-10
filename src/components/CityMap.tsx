@@ -37,6 +37,7 @@ export function CityMap() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [districtLayers, setDistrictLayers] = useState<L.Circle[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [mapInitialized, setMapInitialized] = useState(false);
 
   // Fetch districts from the database
   useEffect(() => {
@@ -70,24 +71,37 @@ export function CityMap() {
   useEffect(() => {
     // Only initialize map if mapContainerRef is ready and there's no map yet
     if (mapContainerRef.current && !map) {
-      const newMap = L.map(mapContainerRef.current).setView(LS_CENTER, DEFAULT_ZOOM);
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(newMap);
-      
-      setMap(newMap);
-      
-      // Cleanup function
-      return () => {
-        newMap.remove();
-      };
+      try {
+        // Small delay to ensure the DOM is fully rendered
+        const timer = setTimeout(() => {
+          if (mapContainerRef.current) {
+            const newMap = L.map(mapContainerRef.current).setView(LS_CENTER, DEFAULT_ZOOM);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(newMap);
+            
+            setMap(newMap);
+            setMapInitialized(true);
+          }
+        }, 100);
+        
+        // Cleanup function
+        return () => {
+          clearTimeout(timer);
+          if (map) {
+            map.remove();
+          }
+        };
+      } catch (error) {
+        console.error("Error initializing map:", error);
+      }
     }
-  }, [map, mapContainerRef]);
+  }, [mapContainerRef.current]); // Only re-run when the ref changes
 
   // Update district colors based on threat level
   useEffect(() => {
-    if (!map || districts.length === 0) return;
+    if (!map || !mapInitialized || districts.length === 0) return;
     
     // Remove previous layers
     districtLayers.forEach(layer => map.removeLayer(layer));
@@ -100,24 +114,28 @@ export function CityMap() {
       currentThreatLevel.threat_code === 'black' ? '#000000' : 
       '#4ade80' : '#4ade80';
     
-    // Add new layers
-    const newLayers = districts.map(district => {
-      const { lat, lng, radius } = district.coordinates;
-      const circle = L.circle([lat, lng], {
-        color: threatColor,
-        fillColor: threatColor,
-        fillOpacity: 0.3,
-        radius: radius
-      }).addTo(map);
+    try {
+      // Add new layers
+      const newLayers = districts.map(district => {
+        const { lat, lng, radius } = district.coordinates;
+        const circle = L.circle([lat, lng], {
+          color: threatColor,
+          fillColor: threatColor,
+          fillOpacity: 0.3,
+          radius: radius
+        }).addTo(map);
+        
+        // Add popup with district info
+        circle.bindPopup(`<b>${district.name}</b><br>Status: ${currentThreatLevel?.threat_code || 'brak zagrożeń'}`);
+        
+        return circle;
+      });
       
-      // Add popup with district info
-      circle.bindPopup(`<b>${district.name}</b><br>Status: ${currentThreatLevel?.threat_code || 'brak zagrożeń'}`);
-      
-      return circle;
-    });
-    
-    setDistrictLayers(newLayers);
-  }, [map, districts, currentThreatLevel]);
+      setDistrictLayers(newLayers);
+    } catch (error) {
+      console.error("Error adding district layers:", error);
+    }
+  }, [map, mapInitialized, districts, currentThreatLevel]);
 
   return (
     <Card className="border border-gray-200 overflow-hidden">
