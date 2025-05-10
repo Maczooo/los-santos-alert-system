@@ -1,12 +1,12 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Card } from '@/components/ui/card';
 import { useAlert } from '@/contexts/AlertContext';
 import { supabase } from '@/integrations/supabase/client';
 
-// Usunięcie domyślnych markerów Leaflet
+// Remove default Leaflet markers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -14,10 +14,11 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-// Współrzędne mapy Los Santos (przybliżone)
+// Los Santos center coordinates (approximate)
 const LS_CENTER = [34.052235, -118.243683];
 const DEFAULT_ZOOM = 12;
 
+// Define proper District type
 type District = {
   id: string;
   name: string;
@@ -27,6 +28,7 @@ type District = {
     lng: number;
     radius: number;
   };
+  created_at?: string;
 };
 
 export function CityMap() {
@@ -34,8 +36,9 @@ export function CityMap() {
   const [map, setMap] = useState<L.Map | null>(null);
   const [districts, setDistricts] = useState<District[]>([]);
   const [districtLayers, setDistrictLayers] = useState<L.Circle[]>([]);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  // Pobieranie dzielnic z bazy danych
+  // Fetch districts from the database
   useEffect(() => {
     const fetchDistricts = async () => {
       const { data, error } = await supabase
@@ -43,26 +46,31 @@ export function CityMap() {
         .select('*');
       
       if (error) {
-        console.error('Błąd podczas pobierania dzielnic:', error);
+        console.error('Error fetching districts:', error);
         return;
       }
       
       if (data) {
-        setDistricts(data as District[]);
+        // Cast data to the proper District type
+        const typedDistricts: District[] = data.map(district => ({
+          id: district.id,
+          name: district.name,
+          code: district.code,
+          coordinates: district.coordinates as { lat: number; lng: number; radius: number }
+        }));
+        
+        setDistricts(typedDistricts);
       }
     };
     
     fetchDistricts();
   }, []);
 
-  // Inicjalizacja mapy
+  // Initialize map
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const mapContainer = document.getElementById('map');
-      
-      if (!mapContainer || map) return;
-      
-      const newMap = L.map('map').setView(LS_CENTER, DEFAULT_ZOOM);
+    // Only initialize map if mapContainerRef is ready and there's no map yet
+    if (mapContainerRef.current && !map) {
+      const newMap = L.map(mapContainerRef.current).setView(LS_CENTER, DEFAULT_ZOOM);
       
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -70,20 +78,21 @@ export function CityMap() {
       
       setMap(newMap);
       
+      // Cleanup function
       return () => {
         newMap.remove();
       };
     }
-  }, [map]);
+  }, [map, mapContainerRef]);
 
-  // Aktualizacja kolorów dzielnic w zależności od poziomu zagrożenia
+  // Update district colors based on threat level
   useEffect(() => {
     if (!map || districts.length === 0) return;
     
-    // Usuń poprzednie warstwy
+    // Remove previous layers
     districtLayers.forEach(layer => map.removeLayer(layer));
     
-    // Kolor zagrożenia
+    // Get threat color
     const threatColor = currentThreatLevel ? 
       currentThreatLevel.threat_code === 'green' ? '#4ade80' :
       currentThreatLevel.threat_code === 'orange' ? '#fb923c' :
@@ -91,7 +100,7 @@ export function CityMap() {
       currentThreatLevel.threat_code === 'black' ? '#000000' : 
       '#4ade80' : '#4ade80';
     
-    // Dodaj nowe warstwy
+    // Add new layers
     const newLayers = districts.map(district => {
       const { lat, lng, radius } = district.coordinates;
       const circle = L.circle([lat, lng], {
@@ -101,7 +110,7 @@ export function CityMap() {
         radius: radius
       }).addTo(map);
       
-      // Dodaj popup z informacją o dzielnicy
+      // Add popup with district info
       circle.bindPopup(`<b>${district.name}</b><br>Status: ${currentThreatLevel?.threat_code || 'brak zagrożeń'}`);
       
       return circle;
@@ -112,7 +121,7 @@ export function CityMap() {
 
   return (
     <Card className="border border-gray-200 overflow-hidden">
-      <div id="map" className="h-[400px] w-full"></div>
+      <div ref={mapContainerRef} className="h-[400px] w-full"></div>
     </Card>
   );
 }

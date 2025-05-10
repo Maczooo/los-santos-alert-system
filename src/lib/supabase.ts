@@ -54,7 +54,7 @@ export async function getThreatLevelHistory(limit = 5): Promise<ThreatLevel[]> {
   }
 }
 
-export async function updateThreatLevel(threatCode: string, message?: string): Promise<ThreatLevel | null> {
+export async function updateThreatLevel(threatCode: ThreatCode, message?: string): Promise<ThreatLevel | null> {
   try {
     const newThreatLevel = {
       threat_code: threatCode,
